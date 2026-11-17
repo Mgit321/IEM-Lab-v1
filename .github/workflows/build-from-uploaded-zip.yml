@@ -1,0 +1,53 @@
+
+name: Build IEM Lab APK from uploaded ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "IEM-Lab-v1-source.zip"
+      - ".github/workflows/build-from-uploaded-zip.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check uploaded source ZIP
+        run: test -f IEM-Lab-v1-source.zip
+
+      - name: Extract Android project
+        run: |
+          mkdir -p extracted
+          unzip -q IEM-Lab-v1-source.zip -d extracted
+          test -f extracted/IEM-Lab-v1/settings.gradle.kts
+          test -f extracted/IEM-Lab-v1/app/build.gradle.kts
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Build debug APK
+        working-directory: extracted/IEM-Lab-v1
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IEM-Lab-debug-APK
+          path: extracted/IEM-Lab-v1/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          
